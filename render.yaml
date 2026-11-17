@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: arkhas
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SERPAPI_KEY
+        sync: false

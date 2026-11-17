@@ -1,0 +1,32 @@
+{
+  "_note": "match: words searched for in the seller name or the link domain. domestic: delivery inside the store's own country (estimate). crossBorder: add a country code only after confirming the store ships there, e.g. \"crossBorder\": {\"OM\": {\"feeAED\": 60, \"days\": 6}}. Offers from countries a store does not ship to are listed separately and never counted as the cheapest.",
+  "stores": [
+    { "id": "amazon-ae", "name": "أمازون الإمارات", "country": "AE", "match": ["amazon.ae", "amazon ae", "amazon.com ae", "amazon"], "domestic": { "freeOverAED": 100, "feeAED": 10, "days": 1 } },
+    { "id": "noon-ae", "name": "نون", "country": "AE", "match": ["noon"], "domestic": { "freeOverAED": 100, "feeAED": 10, "days": 1 } },
+    { "id": "sharafdg-ae", "name": "شرف دي جي", "country": "AE", "match": ["sharaf", "sharafdg"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 2 } },
+    { "id": "carrefour-ae", "name": "كارفور الإمارات", "country": "AE", "match": ["carrefour"], "domestic": { "freeOverAED": 150, "feeAED": 10, "days": 1 } },
+    { "id": "lulu-ae", "name": "لولو", "country": "AE", "match": ["lulu"], "domestic": { "freeOverAED": 100, "feeAED": 10, "days": 2 } },
+    { "id": "emax-ae", "name": "إي ماكس", "country": "AE", "match": ["emax"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 2 } },
+    { "id": "virgin-ae", "name": "فيرجن ميغاستور", "country": "AE", "match": ["virgin"], "domestic": { "freeOverAED": 150, "feeAED": 15, "days": 3 } },
+    { "id": "jumbo-ae", "name": "جمبو", "country": "AE", "match": ["jumbo"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 2 } },
+
+    { "id": "amazon-sa", "name": "أمازون السعودية", "country": "SA", "match": ["amazon.sa", "amazon sa", "amazon"], "domestic": { "freeOverAED": 98, "feeAED": 18, "days": 2 } },
+    { "id": "noon-sa", "name": "نون السعودية", "country": "SA", "match": ["noon"], "domestic": { "freeOverAED": 98, "feeAED": 10, "days": 2 } },
+    { "id": "jarir-sa", "name": "جرير", "country": "SA", "match": ["jarir"], "domestic": { "freeOverAED": 196, "feeAED": 25, "days": 3 } },
+    { "id": "extra-sa", "name": "إكسترا", "country": "SA", "match": ["extra"], "domestic": { "freeOverAED": 196, "feeAED": 25, "days": 3 } },
+    { "id": "carrefour-sa", "name": "كارفور السعودية", "country": "SA", "match": ["carrefour"], "domestic": { "freeOverAED": 196, "feeAED": 15, "days": 2 } },
+
+    { "id": "xcite-kw", "name": "إكسايت", "country": "KW", "match": ["xcite"], "domestic": { "freeOverAED": 60, "feeAED": 12, "days": 2 } },
+    { "id": "blink-kw", "name": "بلينك", "country": "KW", "match": ["blink"], "domestic": { "freeOverAED": 60, "feeAED": 12, "days": 2 } },
+    { "id": "lulu-kw", "name": "لولو الكويت", "country": "KW", "match": ["lulu"], "domestic": { "freeOverAED": 100, "feeAED": 12, "days": 2 } },
+
+    { "id": "carrefour-qa", "name": "كارفور قطر", "country": "QA", "match": ["carrefour"], "domestic": { "freeOverAED": 150, "feeAED": 15, "days": 2 } },
+    { "id": "jumbo-qa", "name": "جمبو إلكترونيكس", "country": "QA", "match": ["jumbo"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 2 } },
+
+    { "id": "sharafdg-bh", "name": "شرف دي جي البحرين", "country": "BH", "match": ["sharaf"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 2 } },
+    { "id": "lulu-bh", "name": "لولو البحرين", "country": "BH", "match": ["lulu"], "domestic": { "freeOverAED": 100, "feeAED": 12, "days": 2 } },
+
+    { "id": "lulu-om", "name": "لولو عُمان", "country": "OM", "match": ["lulu"], "domestic": { "freeOverAED": 100, "feeAED": 12, "days": 3 } },
+    { "id": "sharafdg-om", "name": "شرف دي جي عُمان", "country": "OM", "match": ["sharaf"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 3 } }
+  ]
+}

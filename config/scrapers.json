@@ -1,0 +1,21 @@
+{
+  "_note": "Stores read directly from their pages. All start disabled. Enable one only after checking the store's terms allow it, then set the selectors (open the store's search page, right-click a product > Inspect) and test with: node server/sources/scraper.js <id> \"iphone 17 pro\". If a page exposes schema.org JSON-LD the selectors are not needed. sellerName must match a 'match' entry in stores.json so the store gets its Arabic name and delivery rules.",
+  "stores": [
+    {
+      "id": "example-store-kw",
+      "enabled": false,
+      "country": "KW",
+      "currency": "KWD",
+      "sellerName": "xcite",
+      "searchUrl": "https://www.example.com/search?q={q}",
+      "selectors": {
+        "item": ".product-card",
+        "title": ".product-card__title",
+        "price": ".product-card__price",
+        "link": "a",
+        "image": "img",
+        "outOfStock": ".out-of-stock"
+      }
+    }
+  ]
+}

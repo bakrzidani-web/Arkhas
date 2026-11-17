@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0B7A64">
+<meta name="description" content="قارن سعر أي منتج في متاجر الإمارات والسعودية والكويت وقطر والبحرين وعُمان، واعرف أرخص سعر يوصلك شامل التوصيل.">
+<title>أرخص: قارن الأسعار في الخليج</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <div class="demo" id="demoBanner" hidden><span>وضع تجريبي: الأسعار غير حقيقية لين يتفعّل مصدر أسعار في الخادم</span></div>
+
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>أرخص</div>
+    <div class="hdr-actions">
+      <div class="cpick">
+        <button type="button" class="trigger" id="cTrigger" aria-haspopup="listbox" aria-expanded="false" aria-label="البلد اللي أنت فيه"></button>
+        <div class="cmenu" id="cMenu" role="listbox" aria-label="اختر بلدك"></div>
+      </div>
+      <button type="button" class="iconbtn round" id="themeBtn" aria-label="ألوان التطبيق" title="ألوان التطبيق">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor"/><circle cx="10" cy="7" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7" r="1.1" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="searchwrap">
+    <form class="search" id="searchForm" autocomplete="off">
+      <input id="q" type="search" enterkeyhint="search" placeholder="اكتب اسم المنتج، مثلاً: آيفون 17 برو 256" aria-label="ابحث عن منتج">
+      <button type="button" class="iconbtn" id="scanBtn" aria-label="امسح الباركود" title="امسح الباركود">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>
+      </button>
+      <button type="submit" class="gobtn">ابحث</button>
+    </form>
+    <div class="suggest" id="suggest" role="listbox"></div>
+  </div>
+
+  <main id="view"></main>
+
+  <p class="foot">أسعار الصرف تقريبية ومبنية على ربط العملات الخليجية بالدولار. تأكد من السعر النهائي في المتجر قبل الشراء.</p>
+</div>
+
+<div class="scrim" id="howSheet" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+  <div class="sheet">
+    <button class="close" type="button" data-close aria-label="إغلاق">×</button>
+    <h2 id="howTitle">من وين تجي الأسعار؟</h2>
+    <p class="lead">التطبيق يجمع ثلاث مصادر مع بعض، وكل مصدر يغطي نقص الثاني. كل عرض في النتائج عليه شارة توضح مصدره.</p>
+    <div class="src">
+      <h3><span class="pill src-agg">خدمة بحث</span> نتائج تسوّق مجمّعة</h3>
+      <p>نتائج Google Shopping لكل دولة خليجية. تغطي أغلب المتاجر بطلب واحد.</p>
+    </div>
+    <div class="src">
+      <h3><span class="pill src-api">واجهة رسمية</span> واجهات المتاجر البرمجية</h3>
+      <p>أمازون الإمارات وأمازون السعودية مباشرة. أدق سعر ومخزون لحظة البحث.</p>
+    </div>
+    <div class="src">
+      <h3><span class="pill src-scrape">سحب من الموقع</span> قراءة صفحات المتاجر</h3>
+      <p>للمتاجر اللي ما تظهر في المصادر الثانية، وبس مع المتاجر اللي شروطها تسمح بهذا.</p>
+    </div>
+    <h2 style="font-size:16px;margin-top:16px">وش يصير لما تضغط «ابحث»</h2>
+    <ol class="steps">
+      <li>نرسل البحث للمصادر الثلاثة في نفس الوقت.</li>
+      <li>نطابق نفس المنتج بين المتاجر بالموديل والسعة والمقاس، ونستبعد الإكسسوارات والمستعمل.</li>
+      <li>نحوّل كل الأسعار لعملة بلدك، ونضيف رسوم التوصيل لعنوانك.</li>
+      <li>نرتب العروض حسب السعر النهائي اللي يوصلك فيه المنتج، مو سعر الرف.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="scrim" id="scanSheet" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+  <div class="sheet">
+    <button class="close" type="button" data-close aria-label="إغلاق">×</button>
+    <h2 id="scanTitle">امسح باركود المنتج</h2>
+    <p class="lead" id="scanLead">وجّه الكاميرا على الباركود.</p>
+    <div class="scan" id="scanBox"><video id="scanVideo" playsinline muted></video><div class="line"></div></div>
+    <form class="manual" id="manualForm">
+      <input id="manualCode" inputmode="numeric" pattern="[0-9]*" placeholder="أو اكتب رقم الباركود" aria-label="رقم الباركود">
+      <button class="btn primary" type="submit">ابحث</button>
+    </form>
+  </div>
+</div>
+
+<div class="scrim" id="themeSheet" role="dialog" aria-modal="true" aria-labelledby="themeTitle">
+  <div class="sheet">
+    <button class="close" type="button" data-close aria-label="إغلاق">×</button>
+    <h2 id="themeTitle">ألوان التطبيق</h2>
+    <p class="lead">اختر اللون اللي يعجبك، ويتغير التطبيق كله على طول.</p>
+    <div class="swatches" id="swatches" role="group" aria-label="لون التطبيق"></div>
+    <h3 class="sub">الوضع</h3>
+    <div class="seg" role="group" aria-label="وضع الألوان" id="modeSeg">
+      <button type="button" data-mode="auto">تلقائي</button>
+      <button type="button" data-mode="light">فاتح</button>
+      <button type="button" data-mode="dark">داكن</button>
+    </div>
+    <div class="preview"><span class="dot"></span><span style="flex:1;font-size:13.5px">هذي معاينة سريعة للون</span><span class="btn primary" style="pointer-events:none">زر</span></div>
+    <button type="button" class="btn" id="themeReset" style="margin-top:12px;width:100%">رجّع الألوان الأصلية</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/app.js" type="module"></script>
+</body>
+</html>

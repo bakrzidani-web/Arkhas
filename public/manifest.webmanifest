@@ -1,0 +1,11 @@
+{
+  "name": "أرخص: قارن الأسعار في الخليج",
+  "short_name": "أرخص",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EDF1F0",
+  "theme_color": "#0B7A64",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
