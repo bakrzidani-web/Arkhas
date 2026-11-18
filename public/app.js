@@ -59,7 +59,7 @@ const S = {
   markets: null, // countries whose stores to search; set below
   stores: store.get("arkhas-stores", ["amazon", "noon.com", "trendyol.com"]),
   knownOnly: store.get("arkhas-known", true),
-  sort: "total", src: { api: true, agg: true, scrape: true, mock: true },
+  sort: "total", src: {}, // source filter: a source is shown unless switched off (false)
   q: "", data: null, mode: "home", cfg: null, alertIds: store.get("arkhas-alerts", [])
 };
 const dispCur = () => COUNTRIES[S.user].cur;
@@ -138,12 +138,12 @@ function viewLoading() {
 function srcChips(offers) {
   const present = [...new Set(offers.map(o => o.source))];
   if (present.length < 2) return "";
-  return `<div class="chips" role="group" aria-label="المصادر">${present.map(k => `<button type="button" class="chip" data-src="${k}" aria-pressed="${S.src[k]}">${SRC[k]}</button>`).join("")}</div>`;
+  return `<div class="chips" role="group" aria-label="المصادر">${present.map(k => `<button type="button" class="chip" data-src="${k}" aria-pressed="${S.src[k] !== false}">${SRC[k]}</button>`).join("")}</div>`;
 }
 
 function viewResults() {
   const D = S.data, cur = dispCur(), uname = COUNTRIES[S.user].name;
-  const visible = D.offers.filter(o => S.src[o.source] && (!S.knownOnly || o.store.known));
+  const visible = D.offers.filter(o => S.src[o.source] !== false && (!S.knownOnly || o.store.known));
   const hiddenUnknown = S.knownOnly ? D.offers.filter(o => !o.store.known).length : 0;
   const sorters = { total: (a, b) => a.totalAED - b.totalAED, fast: (a, b) => (a.days ?? 99) - (b.days ?? 99) || a.totalAED - b.totalAED };
   // every in-stock offer in one list, cheapest first; offers from other countries carry a shipping note
@@ -429,7 +429,7 @@ document.addEventListener("click", async e => {
     return search(S.q);
   }
   if (d.sort) { S.sort = d.sort; return render(); }
-  if (d.src) { S.src[d.src] = !S.src[d.src]; return render(); }
+  if (d.src) { S.src[d.src] = S.src[d.src] === false; return render(); }
   if (d.del) {
     try { await api("/api/alerts/" + d.del, { method: "DELETE" }); } catch { /* already gone */ }
     S.alertIds = S.alertIds.filter(id => String(id) !== d.del); store.set("arkhas-alerts", S.alertIds);
