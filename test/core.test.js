@@ -12,6 +12,7 @@ test("Arabic and English titles normalize to the same tokens", () => {
   assert.ok(tokens("ماك بوك اير M4 13 إنش").includes("macbook"));
   assert.ok(tokens("١٢٨ جيجابايت").includes("128gb"));
   assert.ok(tokens("Samsung 65\" TV").includes("65inch"));
+  assert.ok(tokens("AppleAirPods Pro 3").includes("airpods"));
 });
 
 test("matcher keeps the same product and rejects the rest", () => {

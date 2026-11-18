@@ -14,7 +14,27 @@ function parseDeliveryFee(delivery, cur) {
   return amt != null ? { amount: amt, cur: detectCurrency(s, cur) } : null;
 }
 
+/**
+ * Google Shopping fills its first page with the most popular sibling (e.g. "Pro Max" for an
+ * "iPhone 17 Pro" search) and with used units. Excluding those up front leaves room for the
+ * listings the user actually wants.
+ */
+export function refine(q) {
+  const t = q.split(" ");
+  const neg = [];
+  if (t.includes("pro") && !t.includes("max")) neg.push("-max");
+  if (t.some(w => /^s\d{2}$/.test(w)) && !t.some(w => ["ultra", "plus", "edge", "fe"].includes(w))) neg.push("-ultra", "-plus", "-edge");
+  if (!t.some(w => ["used", "renewed", "refurbished"].includes(w))) neg.push("-renewed", "-refurbished", "-used");
+  return [q, ...neg].join(" ");
+}
+
 export async function search(q, country) {
+  const rows = await fetchRows(refine(q), country);
+  // if the exclusions left nothing, fall back to the plain query
+  return rows.length ? rows : fetchRows(q, country);
+}
+
+async function fetchRows(q, country) {
   const c = COUNTRIES[country];
   const url = new URL("https://serpapi.com/search.json");
   url.search = new URLSearchParams({

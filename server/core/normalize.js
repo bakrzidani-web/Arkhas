@@ -39,6 +39,7 @@ export function basic(s) {
     .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
     .replace(/(\d),(\d{3})/g, "$1$2")
     .replace(/["”“″]/g, " inch ")
+    .replace(/\bapple(?=(iphone|ipad|airpods|watch|macbook|tv))/g, "apple ")
     .replace(/[^\p{L}\p{N}.]+/gu, " ")
     .replace(/\.(?!\d)/g, " ")
     .replace(/\s+/g, " ")
