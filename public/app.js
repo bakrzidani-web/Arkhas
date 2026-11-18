@@ -128,8 +128,9 @@ function viewResults() {
   const D = S.data, cur = dispCur(), uname = COUNTRIES[S.user].name;
   const visible = D.offers.filter(o => S.src[o.source]);
   const sorters = { total: (a, b) => a.totalAED - b.totalAED, fast: (a, b) => (a.days ?? 99) - (b.days ?? 99) || a.totalAED - b.totalAED };
-  const ranked = visible.filter(o => o.inStock && o.deliverable).sort(sorters[S.sort]);
-  const abroad = visible.filter(o => o.inStock && !o.deliverable).sort(sorters.total);
+  // every in-stock offer in one list, cheapest first; offers from other countries carry a shipping note
+  const ranked = visible.filter(o => o.inStock).sort(sorters[S.sort]);
+  const abroad = [];
   const oos = visible.filter(o => !o.inStock && o.deliverable);
   const best = [...ranked].sort(sorters.total)[0];
 
@@ -138,7 +139,7 @@ function viewResults() {
       <button type="button" data-scope="local" aria-pressed="${S.scope === "local"}">${flag(S.user, 1)} داخل ${uname}</button>
       <button type="button" data-scope="gcc" aria-pressed="${S.scope === "gcc"}">الخليج كله <span style="display:inline-flex;gap:2px;vertical-align:-1px">${Object.keys(COUNTRIES).map(c => flag(c, 1)).join("")}</span></button>
     </div>`;
-  const head = `<div class="card phead">${D.image ? `<img src="${esc(D.image)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tile',innerHTML:this.dataset.i}))" data-i="${esc(TAG_ICON)}">` : `<span class="tile">${TAG_ICON}</span>`}<div><h1>${esc(D.q)}</h1><p style="direction:rtl;text-align:start">${D.stats.offers} عرض من ${D.stats.stores} متجر</p></div></div>`;
+  const head = `<div class="card phead">${D.image ? `<img src="${esc(D.image)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tile',innerHTML:this.dataset.i}))" data-i="${esc(TAG_ICON)}">` : `<span class="tile">${TAG_ICON}</span>`}<div><h1>${esc(D.q)}</h1><p style="direction:rtl;text-align:start">${ranked.length} عرض من ${D.stats.stores} متجر</p></div></div>`;
 
   const srcLine = Object.entries(D.sources || {}).map(([k, s]) => `<span class="pill ${s.ok ? "src-" + (k === "mock" ? "agg" : k) : "err"}">${SRC[k] || k}: ${s.ok ? s.count : "تعذّر"}</span>`).join("");
   const droppedTotal = D.dropped.reduce((s, d) => s + d.count, 0);
@@ -150,16 +151,16 @@ function viewResults() {
       ${abroad.length ? abroadSection(abroad, cur) : ""}${droppedLine}<div class="srcline">المصادر: ${srcLine}</div>`;
   }
 
-  const avg = D.stats.avgAED, saveAvg = avg - best.totalAED, pct = Math.round(saveAvg / avg * 100);
+  const avg = ranked.reduce((s, o) => s + o.totalAED, 0) / ranked.length, saveAvg = avg - best.totalAED, pct = Math.round(saveAvg / avg * 100);
   const localBest = ranked.filter(o => o.domestic).sort(sorters.total)[0];
-  const shipText = best.deliveryKnown ? (best.deliveryAED ? `شامل التوصيل (${money(best.deliveryAED, cur)})` : "والتوصيل مجاني") : "التوصيل حسب المتجر";
+  const shipText = !best.deliverable ? "والشحن لبلدك غير مؤكد" : best.deliveryKnown ? (best.deliveryAED ? `شامل التوصيل (${money(best.deliveryAED, cur)})` : "والتوصيل مجاني") : "التوصيل حسب المتجر";
   const alertDefault = Math.floor(best.totalAED * 0.95 / CUR[cur].aed);
 
   return `
     ${head}
     ${controls}
     <div class="card best">
-      <span class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z"/></svg>أرخص سعر يوصلك</span>
+      <span class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z"/></svg>${best.domestic ? "أرخص سعر" : "أرخص سعر في الخليج"}</span>
       <div class="price"><span class="num">${fmt(best.totalAED / CUR[cur].aed, cur)}</span><span class="cur">${CUR[cur].s}</span></div>
       <div class="from">من <b>${esc(best.store.name)}</b> ${best.domestic ? "" : `في ${COUNTRIES[best.country].name} `}${flag(best.country, 1)}، ${shipText}</div>
       <div class="meta">${best.days ? `<span>${days(best.days)}</span>` : ""}<span class="pill src-${best.source === "mock" ? "agg" : best.source}">${SRC[best.source]}</span>${best.deliveryEstimated && best.deliveryKnown ? '<span class="est" title="رسوم التوصيل تقديرية حسب سياسة المتجر">التوصيل تقديري</span>' : ""}</div>
@@ -167,7 +168,7 @@ function viewResults() {
         ${saveAvg > 1 && ranked.length > 1 ? `<span class="pill deal">أرخص من متوسط العروض بـ ${money(saveAvg, cur)} (${pct}%)</span>` : ""}
         ${verdict(D.history, best.totalAED)}
       </div>
-      ${(!best.domestic && localBest) ? `<div class="localbest">${flag(S.user, 1)} أرخص سعر داخل ${uname}: <b>${money(localBest.totalAED, cur)}</b> من ${esc(localBest.store.name)}.</div>` : ""}
+      ${(!best.domestic && localBest) ? `<div class="localbest">${flag(S.user, 1)} أرخص سعر داخل ${uname}: <b>${money(localBest.totalAED, cur)}</b> من ${esc(localBest.store.name)}، والفرق ${money(localBest.totalAED - best.totalAED, cur)}.</div>` : ""}
       <div class="row-actions">
         ${best.url ? `<a class="btn primary grow" href="${esc(best.url)}" target="_blank" rel="noopener nofollow sponsored">روح للمتجر</a>` : `<button type="button" class="btn primary grow" disabled>الرابط غير متوفر</button>`}
         <button type="button" class="btn grow" id="alertToggle">نبّهني لما ينزل</button>
@@ -183,7 +184,7 @@ function viewResults() {
 
     ${historyCard(D.history, cur)}
 
-    <div class="section-h">العروض اللي توصلك <small>${ranked.length} عرض</small></div>
+    <div class="section-h">كل العروض من الأرخص <small>${ranked.length} عرض</small></div>
     <div class="chips" role="group" aria-label="الترتيب">
       <button type="button" class="chip" data-sort="total" aria-pressed="${S.sort === "total"}">الأرخص شامل التوصيل</button>
       <button type="button" class="chip" data-sort="fast" aria-pressed="${S.sort === "fast"}">الأسرع توصيلاً</button>
@@ -236,7 +237,7 @@ function offerCard(o, i, cur, best) {
   const first = i === 0 && S.sort === "total";
   const ship = o.deliverable
     ? (o.deliveryKnown ? (o.deliveryAED ? `توصيل ${money(o.deliveryAED, cur)}` : "توصيل مجاني") + (o.deliveryEstimated ? ' <span class="est" title="تقدير حسب سياسة المتجر">تقديري</span>' : "") : "التوصيل حسب المتجر")
-    : `السعر في ${COUNTRIES[o.country].name}`;
+    : `<span class="pill warn">الشحن إلى ${COUNTRIES[S.user].name} غير مؤكد</span>`;
   return `<div class="card offer ${first ? "first" : ""} ${o.inStock ? "" : "oos"}">
     <div class="store">${i >= 0 ? `<span class="rank num">${i + 1}</span>` : ""}${esc(o.store.name)} <span class="cc">${flag(o.country, 1)} ${COUNTRIES[o.country].name}</span>${best && o === best && !first ? '<span class="pill deal">الأرخص</span>' : ""}</div>
     <div class="total">${o.inStock ? money(o.totalAED, cur) : "<small>غير متوفر</small>"}</div>
