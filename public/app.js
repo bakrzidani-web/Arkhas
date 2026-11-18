@@ -48,11 +48,18 @@ const store = {
 /* ---------- State ---------- */
 const S = {
   user: COUNTRIES[store.get("arkhas-country")] ? store.get("arkhas-country") : "AE",
-  scope: store.get("arkhas-scope", "local") === "gcc" ? "gcc" : "local",
+  markets: null, // countries whose stores to search; set below
   sort: "total", src: { api: true, agg: true, scrape: true, mock: true },
   q: "", data: null, mode: "home", cfg: null, alertIds: store.get("arkhas-alerts", [])
 };
 const dispCur = () => COUNTRIES[S.user].cur;
+{
+  const saved = store.get("arkhas-markets", null);
+  S.markets = Array.isArray(saved) && saved.filter(c => COUNTRIES[c]).length ? saved.filter(c => COUNTRIES[c])
+    : store.get("arkhas-scope", "local") === "gcc" ? Object.keys(COUNTRIES) : [S.user];
+}
+const allMarkets = () => S.markets.length === Object.keys(COUNTRIES).length;
+const marketsLabel = () => allMarkets() ? "الخليج كله" : S.markets.map(c => COUNTRIES[c].name).join(" و");
 
 async function api(path, opts) {
   const res = await fetch(path, opts);
@@ -113,7 +120,7 @@ async function loadHomeData() {
 function viewLoading() {
   const srcs = S.cfg ? Object.keys(S.cfg.sources) : ["agg"];
   return `<div class="card loading" aria-live="polite">
-    <div class="phead"><span class="tile">${TAG_ICON}</span><div><h1>${esc(S.q)}</h1><p style="direction:rtl;text-align:start">نبحث في متاجر ${S.scope === "gcc" ? "الخليج كله" : COUNTRIES[S.user].name}…</p></div></div>
+    <div class="phead"><span class="tile">${TAG_ICON}</span><div><h1>${esc(S.q)}</h1><p style="direction:rtl;text-align:start">نبحث في متاجر ${marketsLabel()}…</p></div></div>
     ${srcs.map(k => `<div class="srow"><span><span class="pill src-${k === "mock" ? "agg" : k}">${SRC[k]}</span></span><span style="color:var(--muted)">جاري البحث</span><div class="bar"><i class="grow"></i></div></div>`).join("")}
   </div>`;
 }
@@ -135,9 +142,10 @@ function viewResults() {
   const best = [...ranked].sort(sorters.total)[0];
 
   const controls = `
-    <div class="seg" role="group" aria-label="نطاق البحث">
-      <button type="button" data-scope="local" aria-pressed="${S.scope === "local"}">${flag(S.user, 1)} داخل ${uname}</button>
-      <button type="button" data-scope="gcc" aria-pressed="${S.scope === "gcc"}">الخليج كله <span style="display:inline-flex;gap:2px;vertical-align:-1px">${Object.keys(COUNTRIES).map(c => flag(c, 1)).join("")}</span></button>
+    <div class="markets" role="group" aria-label="ابحث في متاجر">
+      <span class="markets-h">ابحث في:</span>
+      <button type="button" class="chip" data-market="all" aria-pressed="${allMarkets()}">كل الدول</button>
+      ${Object.keys(COUNTRIES).map(c => `<button type="button" class="chip mk" data-market="${c}" aria-pressed="${!allMarkets() && S.markets.includes(c)}">${flag(c, 1)} ${COUNTRIES[c].name}</button>`).join("")}
     </div>`;
   const head = `<div class="card phead">${D.image ? `<img src="${esc(D.image)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tile',innerHTML:this.dataset.i}))" data-i="${esc(TAG_ICON)}">` : `<span class="tile">${TAG_ICON}</span>`}<div><h1>${esc(D.q)}</h1><p style="direction:rtl;text-align:start">${ranked.length} عرض من ${D.stats.stores} متجر</p></div></div>`;
 
@@ -160,7 +168,7 @@ function viewResults() {
     ${head}
     ${controls}
     <div class="card best">
-      <span class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z"/></svg>${best.domestic ? "أرخص سعر" : "أرخص سعر في الخليج"}</span>
+      <span class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z"/></svg>${S.markets.length === 1 ? `أرخص سعر في ${COUNTRIES[S.markets[0]].name}` : allMarkets() ? "أرخص سعر في الخليج" : "أرخص سعر في الدول المختارة"}</span>
       <div class="price"><span class="num">${fmt(best.totalAED / CUR[cur].aed, cur)}</span><span class="cur">${CUR[cur].s}</span></div>
       <div class="from">من <b>${esc(best.store.name)}</b> ${best.domestic ? "" : `في ${COUNTRIES[best.country].name} `}${flag(best.country, 1)}، ${shipText}</div>
       <div class="meta">${best.days ? `<span>${days(best.days)}</span>` : ""}<span class="pill src-${best.source === "mock" ? "agg" : best.source}">${SRC[best.source]}</span>${best.deliveryEstimated && best.deliveryKnown ? '<span class="est" title="رسوم التوصيل تقديرية حسب سياسة المتجر">التوصيل تقديري</span>' : ""}</div>
@@ -168,7 +176,7 @@ function viewResults() {
         ${saveAvg > 1 && ranked.length > 1 ? `<span class="pill deal">أرخص من متوسط العروض بـ ${money(saveAvg, cur)} (${pct}%)</span>` : ""}
         ${verdict(D.history, best.totalAED)}
       </div>
-      ${(!best.domestic && localBest) ? `<div class="localbest">${flag(S.user, 1)} أرخص سعر داخل ${uname}: <b>${money(localBest.totalAED, cur)}</b> من ${esc(localBest.store.name)}، والفرق ${money(localBest.totalAED - best.totalAED, cur)}.</div>` : ""}
+      ${(!best.domestic && localBest && S.markets.includes(S.user)) ? `<div class="localbest">${flag(S.user, 1)} أرخص سعر داخل ${uname}: <b>${money(localBest.totalAED, cur)}</b> من ${esc(localBest.store.name)}، والفرق ${money(localBest.totalAED - best.totalAED, cur)}.</div>` : ""}
       <div class="row-actions">
         ${best.url ? `<a class="btn primary grow" href="${esc(best.url)}" target="_blank" rel="noopener nofollow sponsored">روح للمتجر</a>` : `<button type="button" class="btn primary grow" disabled>الرابط غير متوفر</button>`}
         <button type="button" class="btn grow" id="alertToggle">نبّهني لما ينزل</button>
@@ -262,7 +270,7 @@ async function search(q) {
   $("#view").innerHTML = viewLoading();
   requestAnimationFrame(() => document.querySelectorAll(".bar i.grow").forEach(b => { b.style.transition = "width 6s cubic-bezier(.1,.7,.2,1)"; b.style.width = "92%"; }));
   try {
-    const data = await api(`/api/search?q=${encodeURIComponent(q)}&country=${S.user}&scope=${S.scope}`);
+    const data = await api(`/api/search?q=${encodeURIComponent(q)}&country=${S.user}&countries=${S.markets.join(",")}`);
     if (seq !== searchSeq) return;
     S.data = data;
     if (data.mock) $("#demoBanner").hidden = false;
@@ -379,12 +387,19 @@ document.addEventListener("click", async e => {
   const d = t.dataset;
   if (t.id === "cTrigger") return toggleMenu(!$("#cMenu").classList.contains("on"));
   if (d.country) {
+    const prev = S.user;
     S.user = d.country; store.set("arkhas-country", S.user); toggleMenu(false); renderCountry();
+    if (S.markets.length === 1 && S.markets[0] === prev) { S.markets = [S.user]; store.set("arkhas-markets", S.markets); }
     toast(`${flag(S.user, 1)} صارت الأسعار بـ${CUR[dispCur()].s} وشاملة التوصيل لـ${COUNTRIES[S.user].name}`);
     return S.mode === "results" ? search(S.q) : render();
   }
   if (d.q) { window.scrollTo({ top: 0, behavior: "smooth" }); return search(d.q); }
-  if (d.scope) { S.scope = d.scope; store.set("arkhas-scope", S.scope); return search(S.q); }
+  if (d.market) {
+    // one country, or all of them
+    S.markets = d.market === "all" ? Object.keys(COUNTRIES) : [d.market];
+    store.set("arkhas-markets", S.markets);
+    return search(S.q);
+  }
   if (d.sort) { S.sort = d.sort; return render(); }
   if (d.src) { S.src[d.src] = !S.src[d.src]; return render(); }
   if (d.del) {

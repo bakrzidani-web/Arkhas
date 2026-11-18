@@ -189,3 +189,6 @@ a.btn.primary{color:var(--accent-ink)}
 .alertform input.contact{width:100%;flex-basis:100%;text-align:start}
 .hist .empty-h{font-size:13px;color:var(--muted);padding:6px 0}
 .err-card{border-color:var(--warn);color:var(--warn)}
+.markets{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.markets-h{font-size:13px;color:var(--muted);margin-inline-end:2px}
+.markets .chip{display:inline-flex;align-items:center;gap:5px}

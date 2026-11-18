@@ -45,7 +45,8 @@ app.get("/api/search", limit, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 120);
   if (q.length < 2) return res.status(400).json({ error: "اكتب اسم المنتج" });
   try {
-    res.json(await search({ q, country: validCountry(req.query.country), scope: req.query.scope === "gcc" ? "gcc" : "local" }));
+    const markets = String(req.query.countries || "").split(",").filter(c => COUNTRIES[c]);
+    res.json(await search({ q, country: validCountry(req.query.country), scope: req.query.scope === "gcc" ? "gcc" : "local", markets }));
   } catch (e) {
     console.error("[search]", e);
     res.status(500).json({ error: "صار خطأ أثناء البحث، جرّب مرة ثانية" });

@@ -75,11 +75,13 @@ async function collect(q, countries) {
 const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 
 /**
- * @param {{q: string, country: string, scope: "local"|"gcc"}} p
+ * @param {{q: string, country: string, scope?: "local"|"gcc", markets?: string[]}} p
+ *   markets: the countries whose stores to search (the user picks them); defaults from scope.
  */
-export async function search({ q, country, scope }) {
+export async function search({ q, country, scope, markets }) {
   const qkey = queryKey(q);
-  const countries = scope === "gcc" ? Object.keys(COUNTRIES) : [country];
+  const countries = markets && markets.length ? [...new Set(markets)] : scope === "gcc" ? Object.keys(COUNTRIES) : [country];
+  const histKey = country + (countries.length === 1 && countries[0] === country ? "" : ":" + [...countries].sort().join(","));
   const { offers: raw, statuses, mock: isMock } = await collect(q, countries);
   const qp = parse(q);
   const dropped = {};
@@ -137,13 +139,13 @@ export async function search({ q, country, scope }) {
   const localBest = offers.find(o => o.inStock && o.domestic) || null;
 
   if (best) {
-    try { db.recordBest(qkey, country + (scope === "gcc" ? "+" : ""), best.totalAED, best.store.name); } catch (e) { console.warn("[db]", e.message); }
+    try { db.recordBest(qkey, histKey, best.totalAED, best.store.name); } catch (e) { console.warn("[db]", e.message); }
   }
   try { if (raw.length) db.logSearch(qkey, q.trim()); } catch { /* ignore */ }
 
   const avg = ranked.length ? ranked.reduce((s, o) => s + o.totalAED, 0) / ranked.length : null;
   return {
-    q, qkey, country, scope, mock: isMock,
+    q, qkey, country, markets: countries, mock: isMock,
     fetchedAt: new Date().toISOString(),
     image: (best && best.image) || (offers.find(o => o.image) || {}).image || "",
     best, localBest,
@@ -157,7 +159,7 @@ export async function search({ q, country, scope }) {
     offers,
     dropped: Object.entries(dropped).map(([reason, count]) => ({ reason, label: REASON_AR[reason] || reason, count, samples: samples[reason] || [] })),
     sources: statuses,
-    history: db.history(qkey, country + (scope === "gcc" ? "+" : ""))
+    history: db.history(qkey, histKey)
   };
 }
 
