@@ -80,7 +80,8 @@ app.delete("/api/alerts/:id", (req, res) => { db.deleteAlert(Number(req.params.i
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-app.use(express.static(path.join(ROOT, "public"), { maxAge: "1h", index: "index.html" }));
+// no long-lived caching: phones would keep running an old version for an hour after each update
+app.use(express.static(path.join(ROOT, "public"), { maxAge: 0, index: "index.html" }));
 
 app.listen(config.port, () => {
   const { mock, list } = activeSources();
