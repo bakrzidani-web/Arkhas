@@ -46,7 +46,10 @@ app.get("/api/search", limit, async (req, res) => {
   if (q.length < 2) return res.status(400).json({ error: "اكتب اسم المنتج" });
   try {
     const markets = String(req.query.countries || "").split(",").filter(c => COUNTRIES[c]);
-    res.json(await search({ q, country: validCountry(req.query.country), scope: req.query.scope === "gcc" ? "gcc" : "local", markets }));
+    // stores the user picked: "amazon" or a bare domain such as noon.com (max 6, each costs a search)
+    const stores = [...new Set(String(req.query.stores || "").toLowerCase().split(",").map(s => s.trim().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""))
+      .filter(s => s === "amazon" || /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s)))].slice(0, 6);
+    res.json(await search({ q, country: validCountry(req.query.country), scope: req.query.scope === "gcc" ? "gcc" : "local", markets, stores }));
   } catch (e) {
     console.error("[search]", e);
     res.status(500).json({ error: "صار خطأ أثناء البحث، جرّب مرة ثانية" });

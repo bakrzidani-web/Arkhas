@@ -192,3 +192,6 @@ a.btn.primary{color:var(--accent-ink)}
 .markets{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .markets-h{font-size:13px;color:var(--muted);margin-inline-end:2px}
 .markets .chip{display:inline-flex;align-items:center;gap:5px}
+.chip small{color:var(--muted);font-size:11px}
+.chip[aria-pressed="true"] small{color:inherit;opacity:.75}
+#storesList{margin-bottom:6px}

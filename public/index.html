@@ -103,6 +103,20 @@
   </div>
 </div>
 
+<div class="scrim" id="storesSheet" role="dialog" aria-modal="true" aria-labelledby="storesTitle">
+  <div class="sheet">
+    <button class="close" type="button" data-close aria-label="إغلاق">×</button>
+    <h2 id="storesTitle">المتاجر اللي نبحث فيها</h2>
+    <p class="lead">اختر المتاجر اللي تبغى أسعارها، أو أضف متجر بعنوان موقعه. كل متجر يزيد وقت البحث شوي. <span id="storesCount"></span></p>
+    <div class="chips" id="storesList"></div>
+    <h3 class="sub">أضف متجر</h3>
+    <form class="manual" id="addStoreForm">
+      <input id="newStore" inputmode="url" placeholder="مثلاً: noon.com" aria-label="عنوان موقع المتجر">
+      <button class="btn primary" type="submit">أضف</button>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/app.js" type="module"></script>
 </body>

@@ -13,7 +13,15 @@ const CUR = {
   KWD: { s: "د.ك", d: 3, aed: 11.95 }, BHD: { s: "د.ب", d: 3, aed: USD / 0.376 }, OMR: { s: "ر.ع", d: 3, aed: USD / 0.3845 },
   USD: { s: "$", d: 2, aed: USD }
 };
-const SRC = { api: "واجهة رسمية", agg: "خدمة بحث", scrape: "سحب من الموقع", mock: "تجريبي" };
+const SRC = { api: "واجهة رسمية", agg: "خدمة بحث", store: "بحث في المتجر", scrape: "سحب من الموقع", mock: "تجريبي" };
+// Stores the user can turn on. "amazon" uses Amazon's own search; the rest are searched by web address.
+const STORE_CHOICES = [
+  { id: "amazon", name: "أمازون" }, { id: "noon.com", name: "نون" }, { id: "trendyol.com", name: "ترينديول" },
+  { id: "sharafdg.com", name: "شرف دي جي" }, { id: "carrefouruae.com", name: "كارفور" }, { id: "jarir.com", name: "جرير" },
+  { id: "extra.com", name: "إكسترا" }, { id: "xcite.com", name: "إكسايت" }, { id: "luluhypermarket.com", name: "لولو" },
+  { id: "namshi.com", name: "نمشي" }
+];
+const MAX_STORES = 6;
 const FALLBACK_POPULAR = ["آيفون 17 برو 256", "بلايستيشن 5 برو", "AirPods Pro 3", "نينتندو سويتش 2", "سامسونج S25 ألترا", "دايسون V15"];
 
 /* ---------- Flags (hoist on the left, as flown) ---------- */
@@ -49,6 +57,8 @@ const store = {
 const S = {
   user: COUNTRIES[store.get("arkhas-country")] ? store.get("arkhas-country") : "AE",
   markets: null, // countries whose stores to search; set below
+  stores: store.get("arkhas-stores", ["amazon", "noon.com", "trendyol.com"]),
+  knownOnly: store.get("arkhas-known", true),
   sort: "total", src: { api: true, agg: true, scrape: true, mock: true },
   q: "", data: null, mode: "home", cfg: null, alertIds: store.get("arkhas-alerts", [])
 };
@@ -133,7 +143,8 @@ function srcChips(offers) {
 
 function viewResults() {
   const D = S.data, cur = dispCur(), uname = COUNTRIES[S.user].name;
-  const visible = D.offers.filter(o => S.src[o.source]);
+  const visible = D.offers.filter(o => S.src[o.source] && (!S.knownOnly || o.store.known));
+  const hiddenUnknown = S.knownOnly ? D.offers.filter(o => !o.store.known).length : 0;
   const sorters = { total: (a, b) => a.totalAED - b.totalAED, fast: (a, b) => (a.days ?? 99) - (b.days ?? 99) || a.totalAED - b.totalAED };
   // every in-stock offer in one list, cheapest first; offers from other countries carry a shipping note
   const ranked = visible.filter(o => o.inStock).sort(sorters[S.sort]);
@@ -146,6 +157,11 @@ function viewResults() {
       <span class="markets-h">ابحث في:</span>
       <button type="button" class="chip" data-market="all" aria-pressed="${allMarkets()}">كل الدول</button>
       ${Object.keys(COUNTRIES).map(c => `<button type="button" class="chip mk" data-market="${c}" aria-pressed="${!allMarkets() && S.markets.includes(c)}">${flag(c, 1)} ${COUNTRIES[c].name}</button>`).join("")}
+    </div>
+    <div class="markets">
+      <button type="button" class="chip" data-stores>المتاجر (${S.stores.length})</button>
+      <button type="button" class="chip" data-known aria-pressed="${S.knownOnly}">متاجر معروفة بس</button>
+      ${hiddenUnknown ? `<span class="markets-h">أخفينا ${hiddenUnknown} عرض من بائعين غير معروفين</span>` : ""}
     </div>`;
   const head = `<div class="card phead">${D.image ? `<img src="${esc(D.image)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tile',innerHTML:this.dataset.i}))" data-i="${esc(TAG_ICON)}">` : `<span class="tile">${TAG_ICON}</span>`}<div><h1>${esc(D.q)}</h1><p style="direction:rtl;text-align:start">${ranked.length} عرض من ${D.stats.stores} متجر</p></div></div>`;
 
@@ -155,7 +171,7 @@ function viewResults() {
 
   if (!best) {
     return `${head}${controls}${srcChips(D.offers)}
-      <div class="card empty">${D.offers.length ? "ما فيه عرض متوفر يوصل لبلدك بهذي الفلاتر." : "ما لقينا عروض تطابق بحثك."}<br>جرّب اسم أدق للمنتج (الموديل والسعة)، أو «الخليج كله».</div>
+      <div class="card empty">${hiddenUnknown ? "ما فيه عروض من متاجر معروفة. اضغط «متاجر معروفة بس» عشان تشوف عروض البائعين الثانيين." : D.offers.length ? "ما فيه عرض متوفر بهذي الفلاتر." : "ما لقينا عروض تطابق بحثك."}<br>جرّب اسم أدق للمنتج (الموديل والسعة)، أو «الخليج كله».</div>
       ${abroad.length ? abroadSection(abroad, cur) : ""}${droppedLine}<div class="srcline">المصادر: ${srcLine}</div>`;
   }
 
@@ -270,7 +286,7 @@ async function search(q) {
   $("#view").innerHTML = viewLoading();
   requestAnimationFrame(() => document.querySelectorAll(".bar i.grow").forEach(b => { b.style.transition = "width 6s cubic-bezier(.1,.7,.2,1)"; b.style.width = "92%"; }));
   try {
-    const data = await api(`/api/search?q=${encodeURIComponent(q)}&country=${S.user}&countries=${S.markets.join(",")}`);
+    const data = await api(`/api/search?q=${encodeURIComponent(q)}&country=${S.user}&countries=${S.markets.join(",")}&stores=${encodeURIComponent(S.stores.join(","))}`);
     if (seq !== searchSeq) return;
     S.data = data;
     if (data.mock) $("#demoBanner").hidden = false;
@@ -302,7 +318,10 @@ function hideSuggest() { $("#suggest").classList.remove("on"); }
 /* ---------- Toast & sheets ---------- */
 function toast(html) { const t = $("#toast"); t.innerHTML = html; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2800); }
 function openSheet(id) { $(id).classList.add("on"); $(id).querySelector("[data-close]")?.focus(); }
-function closeSheets() { stopScan(); document.querySelectorAll(".scrim").forEach(s => s.classList.remove("on")); }
+function closeSheets() {
+  stopScan(); document.querySelectorAll(".scrim").forEach(s => s.classList.remove("on"));
+  if (typeof storesChanged !== "undefined" && storesChanged) { storesChanged = false; if (S.mode === "results" && S.q) search(S.q); }
+}
 
 /* ---------- Barcode scanning ---------- */
 let scanStream = null, scanRaf = 0;
@@ -394,6 +413,15 @@ document.addEventListener("click", async e => {
     return S.mode === "results" ? search(S.q) : render();
   }
   if (d.q) { window.scrollTo({ top: 0, behavior: "smooth" }); return search(d.q); }
+  if (d.known !== undefined) { S.knownOnly = !S.knownOnly; store.set("arkhas-known", S.knownOnly); return render(); }
+  if (d.stores !== undefined) { renderStores(); return openSheet("#storesSheet"); }
+  if (d.storeToggle) {
+    const id = d.storeToggle;
+    if (S.stores.includes(id)) S.stores = S.stores.filter(x => x !== id);
+    else if (S.stores.length >= MAX_STORES) return toast(`تقدر تختار ${MAX_STORES} متاجر بالكثير`);
+    else S.stores = [...S.stores, id];
+    store.set("arkhas-stores", S.stores); storesChanged = true; return renderStores();
+  }
   if (d.market) {
     // one country, or all of them
     S.markets = d.market === "all" ? Object.keys(COUNTRIES) : [d.market];
@@ -415,6 +443,25 @@ document.addEventListener("click", async e => {
   if (t.id === "themeReset") { Object.assign(TH, { accent: "#0B7A64", mode: "auto", custom: false }); applyTheme(); return toast("رجعت الألوان الأصلية"); }
   if (t.id === "scanBtn") return startScan();
   if (t.hasAttribute("data-close")) return closeSheets();
+});
+
+/* ---------- Stores picker ---------- */
+let storesChanged = false;
+function storeName(id) { return (STORE_CHOICES.find(s => s.id === id) || {}).name || id; }
+function renderStores() {
+  const custom = S.stores.filter(id => !STORE_CHOICES.some(s => s.id === id));
+  $("#storesList").innerHTML = [...STORE_CHOICES.map(s => s.id), ...custom].map(id =>
+    `<button type="button" class="chip" data-store-toggle="${esc(id)}" aria-pressed="${S.stores.includes(id)}">${esc(storeName(id))}${id === "amazon" || !STORE_CHOICES.some(s => s.id === id) ? "" : ` <small dir="ltr">${esc(id)}</small>`}</button>`).join("");
+  $("#storesCount").textContent = `${S.stores.length} من ${MAX_STORES}`;
+}
+$("#addStoreForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("#newStore").value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v)) return toast("اكتب عنوان موقع المتجر، مثلاً: noon.com");
+  if (S.stores.includes(v)) return toast("المتجر موجود");
+  if (S.stores.length >= MAX_STORES) return toast(`تقدر تختار ${MAX_STORES} متاجر بالكثير`);
+  S.stores = [...S.stores, v]; store.set("arkhas-stores", S.stores); storesChanged = true;
+  $("#newStore").value = ""; renderStores(); toast(`انضاف ${esc(v)}`);
 });
 
 document.addEventListener("submit", async e => {

@@ -13,8 +13,12 @@ import * as serpapi from "../sources/serpapi.js";
 import * as amazon from "../sources/amazon.js";
 import * as scraper from "../sources/scraper.js";
 import * as mock from "../sources/mock.js";
+import * as amazonSerp from "../sources/amazon_serp.js";
+import * as siteSearch from "../sources/sitesearch.js";
 
-const SOURCE_RANK = { api: 0, agg: 1, scrape: 2, mock: 3 };
+const IMMERSIVE_TOP = Math.max(0, Number(process.env.IMMERSIVE_TOP ?? 2));
+
+const SOURCE_RANK = { api: 0, store: 1, agg: 2, scrape: 3, mock: 4 };
 
 export function activeSources() {
   const real = [
@@ -38,37 +42,52 @@ function remember(key, value) {
   if (cache.size > 500) cache.delete(cache.keys().next().value);
 }
 
-/** Raw offers for a query in a set of countries. Cached per query+country. */
-async function collect(q, countries) {
+/** Raw offers for a query in a set of countries. Cached per query+country (and per store). */
+async function collect(q, countries, { primary, stores = [], qp } = {}) {
   const { list, mock: isMock } = activeSources();
   const text = searchText(q) || q;
   const statuses = {};
   const offers = [];
-  await Promise.all(countries.map(async (country) => {
-    const key = `${queryKey(q)}|${country}|${isMock}`;
+  const note = (src, st) => {
+    const agg = statuses[src] ||= { ok: false, count: 0, errors: 0 };
+    agg.ok ||= st.ok; agg.count += st.count; if (!st.ok) agg.errors++;
+  };
+  // run one fetch with caching and status bookkeeping
+  const run = async (key, srcId, fn) => {
     let entry = cached(key);
     if (!entry) {
-      entry = { offers: [], status: {} };
-      await Promise.all(list.filter(s => s.countries.includes(country)).map(async ({ mod }) => {
-        const t0 = Date.now();
-        try {
-          const rows = await mod.search(text, country);
-          entry.offers.push(...rows);
-          entry.status[mod.id] = { ok: true, count: rows.length, ms: Date.now() - t0 };
-        } catch (e) {
-          console.warn(`[${mod.id}] ${country}:`, e.message);
-          entry.status[mod.id] = { ok: false, error: e.message, count: 0, ms: Date.now() - t0 };
-        }
-      }));
-      // only cache when at least one source answered, so a temporary outage isn't remembered
-      if (Object.values(entry.status).some(s => s.ok)) remember(key, entry);
+      try { const rows = await fn(); entry = { rows, st: { ok: true, count: rows.length } }; remember(key, entry); }
+      catch (e) { console.warn(`[${srcId}]`, e.message); entry = { rows: [], st: { ok: false, count: 0, error: e.message } }; }
     }
-    offers.push(...entry.offers);
-    for (const [src, st] of Object.entries(entry.status)) {
-      const agg = statuses[src] ||= { ok: false, count: 0, errors: 0 };
-      agg.ok ||= st.ok; agg.count += st.count; if (!st.ok) agg.errors++;
-    }
+    offers.push(...entry.rows); note(srcId, entry.st);
+    return entry.rows;
+  };
+  const base = `${queryKey(q)}|${isMock}`;
+  const shopping = {};
+  await Promise.all(countries.map(async (country) => {
+    await Promise.all(list.filter(s => s.countries.includes(country)).map(async ({ mod }) => {
+      const rows = await run(`${base}|${country}|${mod.id}`, mod.id, () => mod.search(text, country));
+      if (mod === serpapi) shopping[country] = rows;
+    }));
   }));
+  if (isMock) return { offers, statuses, mock: isMock };
+
+  const extra = [];
+  // 1) the "compare prices" panel of the best-matching products in the main country
+  if (serpapi.enabled() && shopping[primary] && IMMERSIVE_TOP > 0) {
+    const picks = shopping[primary].filter(r => r.pageToken && matchOffer(qp, r.title).ok).slice(0, IMMERSIVE_TOP);
+    for (const r of picks) extra.push(run(`imm|${r.pageToken}`, "agg", () => serpapi.productStores(r.pageToken, primary, r.title)));
+  }
+  // 2) stores the user added
+  for (const st of stores) {
+    if (st === "amazon") {
+      for (const c of countries.filter(c => amazonSerp.DOMAINS[c])) extra.push(run(`${base}|${c}|amazon`, "store", () => amazonSerp.search(text, c)));
+    } else {
+      extra.push(run(`${base}|${primary}|site:${st}`, "store", async () =>
+        (await siteSearch.search(text, primary, st)).filter(o => countries.includes(o.country))));
+    }
+  }
+  await Promise.all(extra);
   return { offers, statuses, mock: isMock };
 }
 
@@ -78,12 +97,13 @@ const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? 
  * @param {{q: string, country: string, scope?: "local"|"gcc", markets?: string[]}} p
  *   markets: the countries whose stores to search (the user picks them); defaults from scope.
  */
-export async function search({ q, country, scope, markets }) {
+export async function search({ q, country, scope, markets, stores = [] }) {
   const qkey = queryKey(q);
   const countries = markets && markets.length ? [...new Set(markets)] : scope === "gcc" ? Object.keys(COUNTRIES) : [country];
   const histKey = country + (countries.length === 1 && countries[0] === country ? "" : ":" + [...countries].sort().join(","));
-  const { offers: raw, statuses, mock: isMock } = await collect(q, countries);
   const qp = parse(q);
+  const primary = countries.includes(country) ? country : countries[0];
+  const { offers: raw, statuses, mock: isMock } = await collect(q, countries, { primary, stores, qp });
   const dropped = {};
   const samples = {};
   const drop = (reason, title) => {
@@ -101,7 +121,7 @@ export async function search({ q, country, scope, markets }) {
     const feeAED = o.deliveryFee ? toAED(o.deliveryFee.amount, o.deliveryFee.currency) : null;
     const d = delivery(store, o.country, country, priceAED, feeAED);
     offers.push({
-      store: { id: store.id, name: store.name, known: store.known },
+      store: { id: store.id, name: store.name, known: store.known || o.source === "store" },
       country: o.country, source: o.source, title: o.title, url: o.url, image: o.image,
       price: o.price, currency: o.currency, priceAED,
       deliveryAED: d.feeAED, deliveryKnown: d.known, deliveryEstimated: d.estimated, days: d.days,

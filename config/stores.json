@@ -27,6 +27,15 @@
     { "id": "lulu-bh", "name": "لولو البحرين", "country": "BH", "match": ["lulu"], "domestic": { "freeOverAED": 100, "feeAED": 12, "days": 2 } },
 
     { "id": "lulu-om", "name": "لولو عُمان", "country": "OM", "match": ["lulu"], "domestic": { "freeOverAED": 100, "feeAED": 12, "days": 3 } },
-    { "id": "sharafdg-om", "name": "شرف دي جي عُمان", "country": "OM", "match": ["sharaf"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 3 } }
+    { "id": "sharafdg-om", "name": "شرف دي جي عُمان", "country": "OM", "match": ["sharaf"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 3 } },
+
+    { "id": "trendyol", "name": "ترينديول", "match": ["trendyol"] },
+    { "id": "namshi", "name": "نمشي", "match": ["namshi"] },
+    { "id": "ounass", "name": "أناس", "match": ["ounass"] },
+    { "id": "eros-ae", "name": "إيروس", "country": "AE", "match": ["eros"], "domestic": { "freeOverAED": 100, "feeAED": 15, "days": 2 } },
+    { "id": "apple-ae", "name": "متجر أبل", "country": "AE", "match": ["apple.com", "apple store", "apple"], "domestic": { "freeOverAED": 0, "feeAED": 0, "days": 2 } },
+    { "id": "apple-sa", "name": "متجر أبل", "country": "SA", "match": ["apple.com", "apple store", "apple"], "domestic": { "freeOverAED": 0, "feeAED": 0, "days": 2 } },
+    { "id": "samsung-ae", "name": "سامسونج", "country": "AE", "match": ["samsung.com", "samsung"], "domestic": { "freeOverAED": 0, "feeAED": 0, "days": 2 } },
+    { "id": "samsung-sa", "name": "سامسونج", "country": "SA", "match": ["samsung.com", "samsung"], "domestic": { "freeOverAED": 0, "feeAED": 0, "days": 2 } }
   ]
 }

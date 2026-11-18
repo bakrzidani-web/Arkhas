@@ -61,7 +61,40 @@ async function fetchRows(q, country) {
       image: r.thumbnail || r.serpapi_thumbnail || "",
       deliveryFee: parseDeliveryFee(r.delivery, cur),
       condition: r.second_hand_condition || "",
-      inStock: true
+      inStock: true,
+      pageToken: r.immersive_product_page_token || ""
+    };
+  }).filter(o => o.price > 0 && o.title);
+}
+
+/**
+ * All the stores Google lists for one product (its "compare prices" panel), e.g. noon, Amazon,
+ * Sharaf DG for the same iPhone. One SerpApi search per product.
+ * Docs: https://serpapi.com/google-immersive-product-api
+ */
+export async function productStores(pageToken, country, fallbackTitle) {
+  const c = COUNTRIES[country];
+  const url = new URL("https://serpapi.com/search.json");
+  url.search = new URLSearchParams({ engine: "google_immersive_product", page_token: pageToken, more_stores: "true", hl: config.serpapiHl, gl: c.gl, api_key: config.serpapiKey }).toString();
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || json.error) throw new Error(json.error || `Product stores HTTP ${res.status}`);
+  const p = json.product_results || {};
+  return (p.stores || []).map(st => {
+    const cur = detectCurrency(st.price, c.cur);
+    const ship = st.shipping_extracted != null ? { amount: Number(st.shipping_extracted), cur } : parseDeliveryFee(st.shipping, cur);
+    return {
+      source: id,
+      country,
+      seller: st.name || "",
+      title: st.title || p.title || fallbackTitle || "",
+      price: st.extracted_price ?? parseAmount(st.price),
+      currency: cur,
+      url: st.link || "",
+      image: (p.thumbnails || [])[0] || "",
+      deliveryFee: ship,
+      condition: "",
+      inStock: !/out of stock|غير متوفر/i.test((st.details_and_offers || []).join(" "))
     };
   }).filter(o => o.price > 0 && o.title);
 }
