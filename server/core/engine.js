@@ -83,12 +83,16 @@ export async function search({ q, country, scope }) {
   const { offers: raw, statuses, mock: isMock } = await collect(q, countries);
   const qp = parse(q);
   const dropped = {};
-  const drop = (reason) => { dropped[reason] = (dropped[reason] || 0) + 1; };
+  const samples = {};
+  const drop = (reason, title) => {
+    dropped[reason] = (dropped[reason] || 0) + 1;
+    if (title && (samples[reason] ||= []).length < 3) samples[reason].push(String(title).slice(0, 120));
+  };
 
   let offers = [];
   for (const o of raw) {
     const m = matchOffer(qp, o.title, { condition: o.condition });
-    if (!m.ok) { drop(m.reason); continue; }
+    if (!m.ok) { drop(m.reason, o.title); continue; }
     const priceAED = toAED(o.price, o.currency);
     if (priceAED == null) { drop("currency"); continue; }
     const store = identifyStore(o.seller, o.country, o.url);
@@ -105,11 +109,14 @@ export async function search({ q, country, scope }) {
     });
   }
 
-  // outliers: accessories that slipped through and listing errors
-  const med = median(offers.filter(o => !o.suspect).map(o => o.priceAED)) || median(offers.map(o => o.priceAED));
+  // outliers: accessories that slipped through and listing errors. The reference price comes from
+  // the most trustworthy offers: known stores first, then any non-suspect offer.
+  const pick = (f) => offers.filter(f).map(o => o.priceAED);
+  const trusted = pick(o => !o.suspect && o.store.known);
+  const med = median(trusted.length >= 2 ? trusted : pick(o => !o.suspect)) || median(pick(() => true));
   offers = offers.filter(o => {
     const low = o.suspect ? 0.7 : 0.45;
-    if (med && (o.priceAED < med * low || o.priceAED > med * 2.5)) { drop("outlier"); return false; }
+    if (med && (o.priceAED < med * low || o.priceAED > med * 2.5)) { drop("outlier", o.title); return false; }
     return true;
   });
 
@@ -148,7 +155,7 @@ export async function search({ q, country, scope }) {
       maxAED: ranked.length ? ranked[ranked.length - 1].totalAED : null
     },
     offers,
-    dropped: Object.entries(dropped).map(([reason, count]) => ({ reason, label: REASON_AR[reason] || reason, count })),
+    dropped: Object.entries(dropped).map(([reason, count]) => ({ reason, label: REASON_AR[reason] || reason, count, samples: samples[reason] || [] })),
     sources: statuses,
     history: db.history(qkey, country + (scope === "gcc" ? "+" : ""))
   };

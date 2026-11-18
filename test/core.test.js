@@ -24,6 +24,10 @@ test("matcher keeps the same product and rejects the rest", () => {
   assert.equal(matchOffer(q, "Apple iPhone 17 Pro 256GB (Renewed)").reason, "used");
   assert.equal(matchOffer(q, "Tempered Glass Screen Protector iPhone 17 Pro").reason, "accessory");
   assert.equal(matchOffer(q, "Case for iPhone 17 Pro").reason, "accessory");
+  assert.equal(matchOffer(q, "Apple iPhone 17 Pro 256 GB: 6.3-inch display, A19 Pro chip, 48MP Pro Fusion camera with Ultra Wide, Cosmic Orange").ok, true);
+  assert.equal(matchOffer("iphone 17 pro", "Apple iPhone 17 Pro Max 512GB Silver").reason, "variant");
+  assert.equal(matchOffer("playstation 5 pro", "Sony PlayStation 5 Pro Console Digital Edition 2TB").ok, true);
+  assert.equal(matchOffer("playstation 5 slim", "PS5 Slim Digital Edition").reason, "variant");
   assert.equal(matchOffer("apple watch series 11 46mm", "Apple Watch Series 11 GPS 46mm Aluminium Case with Sport Band").ok, true);
   assert.equal(matchOffer("ps5 pro", "Sony PlayStation 5 Pro Console with DualSense Controller").ok, true);
   assert.equal(matchOffer("playstation 5 pro", "Sony PlayStation 5 Pro Console with DualSense Controller").ok, true);

@@ -7,8 +7,8 @@ const VARIANTS = new Set(["pro", "max", "ultra", "plus", "mini", "air", "lite", 
 // Words that often mean an accessory. Some also appear in real product titles
 // ("Apple Watch … Aluminium Case with Sport Band"), so on their own they only mark an offer as suspect;
 // the engine then rejects suspects priced far below the real product.
-const ACCESSORY = new Set(["case", "cover", "protector", "glass", "tempered", "charger", "cable", "adapter", "strap", "band", "skin", "sticker", "holder", "stand", "mount", "sleeve", "pouch", "dock", "lens"]);
-const ACCESSORY_STRONG = new Set(["compatible", "replacement", "protector", "tempered", "sticker", "skin"]);
+const ACCESSORY = new Set(["case", "cases", "cover", "covers", "protector", "protectors", "glass", "tempered", "charger", "chargers", "cable", "cables", "adapter", "strap", "straps", "band", "bands", "skin", "skins", "sticker", "stickers", "holder", "stand", "mount", "sleeve", "pouch", "dock", "lens", "controller", "controllers", "faceplate", "decal", "keychain", "toy", "replica", "dummy"]);
+const ACCESSORY_STRONG = new Set(["compatible", "replacement", "protector", "protectors", "tempered", "sticker", "stickers", "skin", "skins", "decal", "faceplate", "replica", "dummy", "keychain"]);
 const USED = new Set(["used", "renewed", "refurbished", "preowned", "pre", "owned", "openbox", "مستعمل", "مجدد"]);
 const STORAGE = /^\d+(gb|tb)$/;
 const SIZE = /^\d+(\.\d+)?(inch|mm|l|ml|g)$/;
@@ -19,6 +19,7 @@ export function parse(text) {
   const set = new Set(t);
   return {
     set,
+    list: t,
     storage: t.filter(w => STORAGE.test(w)),
     sizes: t.filter(w => SIZE.test(w)),
     models: t.filter(w => MODEL.test(w) && !STORAGE.test(w) && !SIZE.test(w)),
@@ -54,7 +55,9 @@ export function matchOffer(query, title, { condition } = {}) {
   if (q.sizes.length && t.sizes.length && !q.sizes.some(s => t.sizes.includes(s))) return { ok: false, reason: "size", score: 0 };
 
   for (const v of q.variants) if (!t.set.has(v)) return { ok: false, reason: "variant", score: 0 };
-  for (const v of t.variants) if (!q.variants.includes(v)) return { ok: false, reason: "variant", score: 0 };
+  // A variant word in the title only means a different product when it sits right after the
+  // product name ("iPhone 17 Pro MAX"); long store titles also mention "Ultra Wide camera" etc.
+  if (variantAfterName(q, t.list)) return { ok: false, reason: "variant", score: 0 };
 
   for (const m of q.models) if (!t.set.has(m)) return { ok: false, reason: "model", score: 0 };
 
@@ -64,6 +67,21 @@ export function matchOffer(query, title, { condition } = {}) {
   // brand words may be missing from the title (e.g. "iPhone 17 Pro" without "Apple"), so require most, not all
   if (score < 0.5) return { ok: false, reason: "irrelevant", score };
   return { ok: true, score, suspect };
+}
+
+function variantAfterName(q, titleTokens) {
+  const anchors = [...q.models, ...q.variants];
+  if (!anchors.length) return false;
+  for (let i = 0; i < titleTokens.length; i++) {
+    if (!anchors.includes(titleTokens[i])) continue;
+    // walk past the run of query tokens (e.g. "17 pro"), then look at the next token
+    let j = i;
+    while (j + 1 < titleTokens.length && (anchors.includes(titleTokens[j + 1]) || q.set.has(titleTokens[j + 1]))) j++;
+    const next = titleTokens[j + 1];
+    if (next && VARIANTS.has(next) && !q.variants.includes(next)) return true;
+    i = j;
+  }
+  return false;
 }
 
 export const REASON_AR = {
